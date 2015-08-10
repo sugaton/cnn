@@ -1,11 +1,13 @@
-#include "cnn/nodes.h"
+#define HAVE_CUDA true
+
 #include "cnn/cnn.h"
+#include "cnn/nodes.h"
 #include "cnn/training.h"
 #include "cnn/timing.h"
 #include "cnn/rnn.h"
 #include "cnn/gru.h"
 #include "cnn/lstm.h"
-#include "cnn/dict.h"
+#include "cnn/dict_unk.h"
 # include "cnn/expr.h"
 
 #include <iostream>
@@ -23,7 +25,8 @@ unsigned INPUT_DIM = 8;  //256
 unsigned HIDDEN_DIM = 24;  // 1024
 unsigned VOCAB_SIZE = 0;
 
-cnn::Dict d;
+// cnn::Dict d;
+cnn::Dict_U d;
 int kSOS;
 int kEOS;
 
@@ -34,7 +37,7 @@ struct RNNLanguageModel {
   Parameters* p_bias;
   Builder builder;
   explicit RNNLanguageModel(Model& model) : builder(LAYERS, INPUT_DIM, HIDDEN_DIM, &model) {
-    p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM}); 
+    p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});
     p_R = model.add_parameters({VOCAB_SIZE, HIDDEN_DIM});
     p_bias = model.add_parameters({VOCAB_SIZE});
   }
@@ -52,11 +55,11 @@ struct RNNLanguageModel {
       // y_t = RNN(x_t)
       Expression i_y_t = builder.add_input(i_x_t);
       Expression i_r_t =  i_bias + i_R * i_y_t;
-      
+
       // we can easily look at intermidiate values
       std::vector<float> r_t = as_vector(i_r_t.value());
-      for (float f : r_t) cout << f << " "; cout << endl;
-      cout << "[" << as_scalar(pick(i_r_t, sent[t+1]).value()) << "]" << endl;
+    //   for (float f : r_t) cout << f << " "; cout << endl;
+    //   cout << "[" << as_scalar(pick(i_r_t, sent[t+1]).value()) << "]" << endl;
 
       // LogSoftmax followed by PickElement can be written in one step
       // using PickNegLogSoftmax
@@ -87,7 +90,7 @@ struct RNNLanguageModel {
     ComputationGraph cg;
     builder.new_graph(cg);  // reset RNN builder for new graph
     builder.start_new_sequence();
-    
+
     Expression i_R = parameter(cg, p_R);
     Expression i_bias = parameter(cg, p_bias);
     vector<Expression> errs;
@@ -99,9 +102,9 @@ struct RNNLanguageModel {
       // y_t = RNN(x_t)
       Expression i_y_t = builder.add_input(i_x_t);
       Expression i_r_t = i_bias + i_R * i_y_t;
-      
+
       Expression ydist = softmax(i_r_t);
-      
+
       unsigned w = 0;
       while (w == 0 || (int)w == kSOS) {
         auto dist = as_vector(cg.incremental_forward());
@@ -131,6 +134,16 @@ int main(int argc, char** argv) {
   string line;
   int tlc = 0;
   int ttoks = 0;
+  cerr << "Counting words in " << argv[1] << "...\n";
+  {
+    ifstream in(argv[1]);
+    assert(in);
+    while(getline(in, line)) {
+      ++tlc;
+      CountWords(line, &d);
+    }
+  }
+  d.Freeze(); // no new word types allowed
   cerr << "Reading training data from " << argv[1] << "...\n";
   {
     ifstream in(argv[1]);
@@ -146,7 +159,6 @@ int main(int argc, char** argv) {
     }
     cerr << tlc << " lines, " << ttoks << " tokens, " << d.size() << " types\n";
   }
-  d.Freeze(); // no new word types allowed
   VOCAB_SIZE = d.size();
 
   int dlc = 0;
@@ -250,4 +262,3 @@ int main(int argc, char** argv) {
   }
   delete sgd;
 }
-

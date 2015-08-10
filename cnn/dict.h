@@ -52,7 +52,7 @@ class Dict {
 
   void clear() { words_.clear(); d_.clear(); }
 
- private:
+ protected:
   bool frozen;
   std::vector<std::string> words_;
   Map d_;
