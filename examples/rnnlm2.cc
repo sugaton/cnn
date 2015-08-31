@@ -25,7 +25,7 @@ unsigned LAYERS = 2;
 unsigned INPUT_DIM = 256;
 // unsigned HIDDEN_DIM = 24;  // 1024
 unsigned HIDDEN_DIM = 1024;
-// unsigned VOCAB_SIZE = 0;
+unsigned VOCAB_SIZE = 0;
 
 // cnn::Dict d;
 cnn::Dict_U d;
