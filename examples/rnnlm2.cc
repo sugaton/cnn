@@ -21,9 +21,11 @@ using namespace std;
 using namespace cnn;
 
 unsigned LAYERS = 2;
-unsigned INPUT_DIM = 8;  //256
-unsigned HIDDEN_DIM = 24;  // 1024
-unsigned VOCAB_SIZE = 0;
+// unsigned INPUT_DIM = 8;  //256
+unsigned INPUT_DIM = 256;
+// unsigned HIDDEN_DIM = 24;  // 1024
+unsigned HIDDEN_DIM = 1024;
+// unsigned VOCAB_SIZE = 0;
 
 // cnn::Dict d;
 cnn::Dict_U d;
@@ -214,7 +216,7 @@ int main(int argc, char** argv) {
   int report = 0;
   unsigned lines = 0;
   while(1) {
-    Timer iteration("completed in");
+    Timer iteration("completed in"); // called after one loop
     double loss = 0;
     unsigned chars = 0;
     for (unsigned i = 0; i < report_every_i; ++i) {
@@ -237,8 +239,11 @@ int main(int argc, char** argv) {
       ++lines;
     }
     sgd->status();
+    // no need to show score every time
+#if 0
     cerr << " E = " << (loss / chars) << " ppl=" << exp(loss / chars) << ' ';
     lm.RandomSample();
+#endif
 
     // show score on dev data?
     report++;
